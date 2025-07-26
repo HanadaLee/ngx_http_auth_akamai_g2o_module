@@ -29,84 +29,84 @@ typedef struct {
     ngx_uint_t version;
     time_t time_window;
     ngx_uint_t log_level;
-} ngx_http_akamai_g2o_loc_conf_t;
+} ngx_http_auth_akamai_g2o_loc_conf_t;
 
-static ngx_int_t ngx_http_akamai_g2o_handler(ngx_http_request_t *r);
+static ngx_int_t ngx_http_auth_akamai_g2o_handler(ngx_http_request_t *r);
 
-static void *ngx_http_akamai_g2o_create_loc_conf(ngx_conf_t *cf);
-static char *ngx_http_akamai_g2o_merge_loc_conf(ngx_conf_t *cf,
+static void *ngx_http_auth_akamai_g2o_create_loc_conf(ngx_conf_t *cf);
+static char *ngx_http_auth_akamai_g2o_merge_loc_conf(ngx_conf_t *cf,
     void *parent, void *child);
-static char *ngx_http_akamai_g2o_hash_function_command(ngx_conf_t *cf,
+static char *ngx_http_auth_akamai_g2o_hash_function_command(ngx_conf_t *cf,
     ngx_command_t *cmd, void *conf);
-static ngx_int_t ngx_http_akamai_g2o_init(ngx_conf_t *cf);
+static ngx_int_t ngx_http_auth_akamai_g2o_init(ngx_conf_t *cf);
 
 static ngx_int_t base64_signature_of_data(ngx_http_request_t *r, ngx_str_t data, ngx_str_t key, u_char *signature);
 static int try_get_auth_data_fields(ngx_str_t data, u_int *version, u_int *time, ngx_str_t *nonce);
-static char *ngx_http_akamai_g2o_mode_command(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
-static char *ngx_http_akamai_g2o_log_level_command(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+static char *ngx_http_auth_akamai_g2o_mode_command(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
+static char *ngx_http_auth_akamai_g2o_log_level_command(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 
-static ngx_command_t  ngx_http_akamai_g2o_commands[] = {
-    { ngx_string("g2o"),
+static ngx_command_t  ngx_http_auth_akamai_g2o_commands[] = {
+    { ngx_string("auth_akamai_g2o"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
-      ngx_http_akamai_g2o_mode_command,
+      ngx_http_auth_akamai_g2o_mode_command,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_akamai_g2o_loc_conf_t, mode),
+      offsetof(ngx_http_auth_akamai_g2o_loc_conf_t, mode),
       NULL },
 
-    { ngx_string("g2o_nonce"),
+    { ngx_string("auth_akamai_g2o_nonce"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
       ngx_http_set_complex_value_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_akamai_g2o_loc_conf_t, nonce),
+      offsetof(ngx_http_auth_akamai_g2o_loc_conf_t, nonce),
       NULL },
 
-    { ngx_string("g2o_key"),
+    { ngx_string("auth_akamai_g2o_key"),
       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
       ngx_http_set_complex_value_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_akamai_g2o_loc_conf_t, key),
+      offsetof(ngx_http_auth_akamai_g2o_loc_conf_t, key),
       NULL },
 
-    { ngx_string("g2o_data_header"),
+    { ngx_string("auth_akamai_g2o_data_header"),
       NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_str_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_akamai_g2o_loc_conf_t, data_header),
+      offsetof(ngx_http_auth_akamai_g2o_loc_conf_t, data_header),
       NULL },
 
-    { ngx_string("g2o_sign_header"),
+    { ngx_string("auth_akamai_g2o_sign_header"),
       NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_str_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_akamai_g2o_loc_conf_t, sign_header),
+      offsetof(ngx_http_auth_akamai_g2o_loc_conf_t, sign_header),
       NULL },
 
-    { ngx_string("g2o_hash_function"),
+    { ngx_string("auth_akamai_g2o_hash_function"),
       NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_CONF_TAKE1,
-      ngx_http_akamai_g2o_hash_function_command,
+      ngx_http_auth_akamai_g2o_hash_function_command,
       NGX_HTTP_LOC_CONF_OFFSET,
       0,
       NULL },
 
-    { ngx_string("g2o_version"),
+    { ngx_string("auth_akamai_g2o_version"),
       NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_num_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_akamai_g2o_loc_conf_t, version),
+      offsetof(ngx_http_auth_akamai_g2o_loc_conf_t, version),
       NULL },
 
-    { ngx_string("g2o_time_window"),
+    { ngx_string("auth_akamai_g2o_time_window"),
       NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_CONF_TAKE1,
       ngx_conf_set_sec_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_akamai_g2o_loc_conf_t, time_window),
+      offsetof(ngx_http_auth_akamai_g2o_loc_conf_t, time_window),
       NULL },
 
-    { ngx_string("g2o_log_level"),
+    { ngx_string("auth_akamai_g2o_log_level"),
       NGX_HTTP_MAIN_CONF | NGX_HTTP_SRV_CONF | NGX_HTTP_LOC_CONF | NGX_CONF_FLAG,
-      ngx_http_akamai_g2o_log_level_command,
+      ngx_http_auth_akamai_g2o_log_level_command,
       NGX_HTTP_LOC_CONF_OFFSET,
-      offsetof(ngx_http_akamai_g2o_loc_conf_t, log_level),
+      offsetof(ngx_http_auth_akamai_g2o_loc_conf_t, log_level),
       NULL },
 
       ngx_null_command
@@ -124,9 +124,9 @@ static ngx_str_t err_levels[] = {
     ngx_string("debug")
 };
 
-static ngx_http_module_t  ngx_http_akamai_g2o_module_ctx = {
+static ngx_http_module_t  ngx_http_auth_akamai_g2o_module_ctx = {
     NULL,                                  /* preconfiguration */
-    ngx_http_akamai_g2o_init,                  /* postconfiguration */
+    ngx_http_auth_akamai_g2o_init,                  /* postconfiguration */
 
     NULL,                                  /* create main configuration */
     NULL,                                  /* init main configuration */
@@ -134,15 +134,15 @@ static ngx_http_module_t  ngx_http_akamai_g2o_module_ctx = {
     NULL,                                  /* create server configuration */
     NULL,                                  /* merge server configuration */
 
-    ngx_http_akamai_g2o_create_loc_conf,       /* create location configuration */
-    ngx_http_akamai_g2o_merge_loc_conf         /* merge location configuration */
+    ngx_http_auth_akamai_g2o_create_loc_conf,       /* create location configuration */
+    ngx_http_auth_akamai_g2o_merge_loc_conf         /* merge location configuration */
 };
 
 
-ngx_module_t  ngx_http_akamai_g2o_module = {
+ngx_module_t  ngx_http_auth_akamai_g2o_module = {
     NGX_MODULE_V1,
-    &ngx_http_akamai_g2o_module_ctx,           /* module context */
-    ngx_http_akamai_g2o_commands,              /* module directives */
+    &ngx_http_auth_akamai_g2o_module_ctx,           /* module context */
+    ngx_http_auth_akamai_g2o_commands,              /* module directives */
     NGX_HTTP_MODULE,                       /* module type */
     NULL,                                  /* init master */
     NULL,                                  /* init module */
@@ -155,9 +155,9 @@ ngx_module_t  ngx_http_akamai_g2o_module = {
 };
 
 static char *
-ngx_http_akamai_g2o_mode_command(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+ngx_http_auth_akamai_g2o_mode_command(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
-    ngx_http_akamai_g2o_loc_conf_t    *g2o_conf = conf;
+    ngx_http_auth_akamai_g2o_loc_conf_t    *g2o_conf = conf;
     ngx_str_t                       *value;
 
     value = cf->args->elts;
@@ -188,9 +188,9 @@ ngx_http_akamai_g2o_mode_command(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
 
 static char *
-ngx_http_akamai_g2o_log_level_command(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+ngx_http_auth_akamai_g2o_log_level_command(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
-    ngx_http_akamai_g2o_loc_conf_t    *g2o_conf = conf;
+    ngx_http_auth_akamai_g2o_loc_conf_t    *g2o_conf = conf;
     ngx_str_t                       *value;
     ngx_uint_t   n;
 
@@ -213,7 +213,7 @@ ngx_http_akamai_g2o_log_level_command(ngx_conf_t *cf, ngx_command_t *cmd, void *
 
 static void 
 get_data_and_sign_from_request_headers(ngx_http_request_t *r, ngx_str_t *header_data, ngx_str_t *header_sign) {
-    ngx_http_akamai_g2o_loc_conf_t  *alcf;
+    ngx_http_auth_akamai_g2o_loc_conf_t  *alcf;
     ngx_list_t headers = r->headers_in.headers;
     ngx_list_part_t *part = &headers.part;
     ngx_table_elt_t* data = part->elts;
@@ -221,7 +221,7 @@ get_data_and_sign_from_request_headers(ngx_http_request_t *r, ngx_str_t *header_
 
     unsigned int i;
 
-    alcf = ngx_http_get_module_loc_conf(r, ngx_http_akamai_g2o_module);
+    alcf = ngx_http_get_module_loc_conf(r, ngx_http_auth_akamai_g2o_module);
 
     for (i = 0 ;; i++) {
 
@@ -250,7 +250,7 @@ get_data_and_sign_from_request_headers(ngx_http_request_t *r, ngx_str_t *header_
 }
 
 static int 
-check_has_g2o_headers(ngx_http_request_t *r, ngx_http_akamai_g2o_loc_conf_t  *alcf) {
+check_has_g2o_headers(ngx_http_request_t *r, ngx_http_auth_akamai_g2o_loc_conf_t  *alcf) {
     ngx_str_t key, nonce;
 
     if (ngx_http_complex_value(
@@ -347,7 +347,7 @@ check_has_g2o_headers(ngx_http_request_t *r, ngx_http_akamai_g2o_loc_conf_t  *al
 
 static ngx_int_t 
 base64_signature_of_data(ngx_http_request_t *r, ngx_str_t data, ngx_str_t key, u_char *signature) {
-    ngx_http_akamai_g2o_loc_conf_t  *alcf;
+    ngx_http_auth_akamai_g2o_loc_conf_t  *alcf;
     unsigned char md[EVP_MAX_MD_SIZE];
     unsigned int md_len;
     ngx_str_t base64_dest;
@@ -357,7 +357,7 @@ base64_signature_of_data(ngx_http_request_t *r, ngx_str_t data, ngx_str_t key, u
 #endif
     HMAC_CTX* hmac;
 
-    alcf = ngx_http_get_module_loc_conf(r, ngx_http_akamai_g2o_module);
+    alcf = ngx_http_get_module_loc_conf(r, ngx_http_auth_akamai_g2o_module);
 
 #if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
     hmac = HMAC_CTX_new();
@@ -447,11 +447,11 @@ try_get_auth_data_fields(ngx_str_t data, u_int *version, u_int *time, ngx_str_t 
 }
 
 static ngx_int_t
-ngx_http_akamai_g2o_handler(ngx_http_request_t *r)
+ngx_http_auth_akamai_g2o_handler(ngx_http_request_t *r)
 {
-    ngx_http_akamai_g2o_loc_conf_t  *alcf;
+    ngx_http_auth_akamai_g2o_loc_conf_t  *alcf;
 
-    alcf = ngx_http_get_module_loc_conf(r, ngx_http_akamai_g2o_module);
+    alcf = ngx_http_get_module_loc_conf(r, ngx_http_auth_akamai_g2o_module);
 
     switch (alcf->mode) 
 	{
@@ -473,9 +473,9 @@ ngx_http_akamai_g2o_handler(ngx_http_request_t *r)
 }
 
 static char *
-ngx_http_akamai_g2o_hash_function_command(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+ngx_http_auth_akamai_g2o_hash_function_command(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
-    ngx_http_akamai_g2o_loc_conf_t    *g2o_conf = conf;
+    ngx_http_auth_akamai_g2o_loc_conf_t    *g2o_conf = conf;
     ngx_str_t                       *value;
 
     value = cf->args->elts;
@@ -501,11 +501,11 @@ ngx_http_akamai_g2o_hash_function_command(ngx_conf_t *cf, ngx_command_t *cmd, vo
 }
 
 static void *
-ngx_http_akamai_g2o_create_loc_conf(ngx_conf_t *cf)
+ngx_http_auth_akamai_g2o_create_loc_conf(ngx_conf_t *cf)
 {
-    ngx_http_akamai_g2o_loc_conf_t  *conf;
+    ngx_http_auth_akamai_g2o_loc_conf_t  *conf;
 
-    conf = ngx_pcalloc(cf->pool, sizeof(ngx_http_akamai_g2o_loc_conf_t));
+    conf = ngx_pcalloc(cf->pool, sizeof(ngx_http_auth_akamai_g2o_loc_conf_t));
     if (conf == NULL) {
         return NGX_CONF_ERROR;
     }
@@ -519,10 +519,10 @@ ngx_http_akamai_g2o_create_loc_conf(ngx_conf_t *cf)
 
 
 static char *
-ngx_http_akamai_g2o_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
+ngx_http_auth_akamai_g2o_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 {
-    ngx_http_akamai_g2o_loc_conf_t  *prev = parent;
-    ngx_http_akamai_g2o_loc_conf_t  *conf = child;
+    ngx_http_auth_akamai_g2o_loc_conf_t  *prev = parent;
+    ngx_http_auth_akamai_g2o_loc_conf_t  *conf = child;
 	ngx_conf_merge_value(conf->mode, prev->mode, G2O_MODE_OFF);
     if (conf->key == NULL)
     {
@@ -559,7 +559,7 @@ ngx_http_akamai_g2o_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 
 
 static ngx_int_t
-ngx_http_akamai_g2o_init(ngx_conf_t *cf)
+ngx_http_auth_akamai_g2o_init(ngx_conf_t *cf)
 {
     ngx_http_handler_pt        *h;
     ngx_http_core_main_conf_t  *cmcf;
@@ -571,7 +571,7 @@ ngx_http_akamai_g2o_init(ngx_conf_t *cf)
         return NGX_ERROR;
     }
 
-    *h = ngx_http_akamai_g2o_handler;
+    *h = ngx_http_auth_akamai_g2o_handler;
 
     return NGX_OK;
 }

@@ -17,12 +17,12 @@ It requires OpenSSL.
 
 ## Configuration
 
-Place the following settings (`g2o`, `g2o_nonce` and `g2o_key`) into a main, server or location section of your conf file:
+Place the following settings (`auth_akamai_g2o`, `auth_akamai_g2o_nonce` and `auth_akamai_g2o_key`) into a main, server or location section of your conf file:
 
     location /download {
-        g2o        on;
-        g2o_nonce  "token";
-        g2o_key    "a_password";
+        auth_akamai_g2o        on;
+        auth_akamai_g2o_nonce  "token";
+        auth_akamai_g2o_key    "a_password";
     }
 
 ## Testing

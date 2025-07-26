@@ -28,30 +28,30 @@
              index  index.html index.htm;
 +
 +            location /download {
-+                g2o                   on;
-+                g2o_nonce             "token";
-+                g2o_key               "a_password";
++                auth_akamai_g2o                   on;
++                auth_akamai_g2o_nonce             "token";
++                auth_akamai_g2o_key               "a_password";
 +            }
 +
 +            location /allow_token1 {
-+                g2o        on;
-+                g2o_nonce  "token1";
-+                g2o_key    "a_different_password";
++                auth_akamai_g2o        on;
++                auth_akamai_g2o_nonce  "token1";
++                auth_akamai_g2o_key    "a_different_password";
 +            }
 +
 +            location /allow_all {
-+                g2o        off;
-+                g2o_nonce  "token";
-+                g2o_key    "a_password";
++                auth_akamai_g2o        off;
++                auth_akamai_g2o_nonce  "token";
++                auth_akamai_g2o_key    "a_password";
 +            }
 +
 +            location /using_vars {
 +                set $token "token";
 +                set $pass  "a_password";
 +
-+                g2o        on;
-+                g2o_nonce  $token;
-+                g2o_key    $pass;
++                auth_akamai_g2o        on;
++                auth_akamai_g2o_nonce  $token;
++                auth_akamai_g2o_key    $pass;
 +            }
          }
  
