@@ -43,7 +43,7 @@ static ngx_int_t ngx_http_auth_akamai_g2o_init(ngx_conf_t *cf);
 
 static ngx_int_t ngx_http_auth_akamai_g2o_base64_signature_of_data(
     ngx_http_request_t *r, ngx_str_t data, ngx_str_t key, u_char *signature);
-static int ngx_http_auth_akamai_g2o_get_auth_data_fields(ngx_str_t data,
+static ngx_int_t ngx_http_auth_akamai_g2o_get_auth_data_fields(ngx_str_t data,
     u_int *version, u_int *time, ngx_str_t *nonce);
 
 
@@ -168,7 +168,7 @@ ngx_module_t  ngx_http_auth_akamai_g2o_module = {
 };
 
 
-static void 
+static void
 ngx_http_auth_akamai_g2o_get_data_and_sign(ngx_http_request_t *r,
     ngx_str_t *header_data, ngx_str_t *header_sign)
 {
@@ -214,14 +214,14 @@ ngx_http_auth_akamai_g2o_get_data_and_sign(ngx_http_request_t *r,
 }
 
 
-static int 
+static ngx_int_t
 ngx_http_auth_akamai_g2o_check_headers(ngx_http_request_t *r,
     ngx_http_auth_akamai_g2o_loc_conf_t *alcf)
 {
     ngx_str_t key, nonce;
 
     if (ngx_http_complex_value(r, alcf->key, &key) != NGX_OK) {
-        return 0;
+        return NGX_ERROR;
     }
 
     /* if the key evaluates to an empty string, don't perform any validation */
@@ -230,7 +230,7 @@ ngx_http_auth_akamai_g2o_check_headers(ngx_http_request_t *r,
     }
 
     if (ngx_http_complex_value(r, alcf->nonce, &nonce) != NGX_OK) {
-        return 0;
+        return NGX_ERROR;
     }
 
     /* if the nonce evaluates to an empty string, don't perform any validation */
@@ -245,24 +245,24 @@ ngx_http_auth_akamai_g2o_check_headers(ngx_http_request_t *r,
     if (!header_data.data) {
         ngx_log_error(alcf->log_level, r->connection->log, 0,
                       "g2o missing data header");
-        return 0;
+        return NGX_ERROR;
     }
 
     if (!header_sign.data) {
         ngx_log_error(alcf->log_level, r->connection->log, 0,
                       "g2o missing sign header");
-        return 0;
+        return NGX_ERROR;
     }
 
     u_int version, auth_time;
     ngx_str_t header_nonce;
 
-    if (!ngx_http_auth_akamai_g2o_get_auth_data_fields(header_data, &version,
-            &auth_time, &header_nonce))
+    if (ngx_http_auth_akamai_g2o_get_auth_data_fields(header_data, &version,
+            &auth_time, &header_nonce) != NGX_OK)
     {
         ngx_log_error(alcf->log_level, r->connection->log, 0,
                       "g2o data not formatted correctly \"%V\"", &header_data);
-        return 0;
+        return NGX_ERROR;
     }
 
     time_t current_time = ngx_time();
@@ -271,21 +271,21 @@ ngx_http_auth_akamai_g2o_check_headers(ngx_http_request_t *r,
     if (version != alcf->version) {
         ngx_log_error(alcf->log_level, r->connection->log, 0,
                       "g2o version \"%ud\" invalid", version);
-        return 0;
+        return NGX_ERROR;
     }
 
     /* request not too far into the future */
     if (auth_time > current_time + alcf->time_window) {
         ngx_log_error(alcf->log_level, r->connection->log, 0,
                       "g2o auth time \"%ud\" too far into the future", auth_time);
-        return 0;
+        return NGX_ERROR;
     }
 
     /* request not too old */
     if (auth_time < current_time - alcf->time_window) {
         ngx_log_error(alcf->log_level, r->connection->log, 0,
                       "g2o auth time \"%ud\" too old", auth_time);
-        return 0;
+        return NGX_ERROR;
     }
 
     /* nonce is correct */
@@ -294,7 +294,7 @@ ngx_http_auth_akamai_g2o_check_headers(ngx_http_request_t *r,
     {
         ngx_log_error(alcf->log_level, r->connection->log, 0,
                       "g2o nonce \"%V\" incorrect", &header_nonce);
-        return 0;
+        return NGX_ERROR;
     }
 
     /* for base64 we need: ceiling(32 / 3) * 4 + 1 = 45 bytes */
@@ -308,22 +308,22 @@ ngx_http_auth_akamai_g2o_check_headers(ngx_http_request_t *r,
                                                           key, signature)
             != NGX_OK)
     {
-        return 0;
+        return NGX_ERROR;
     }
 
     if (ngx_strncmp(header_sign.data, signature, header_sign.len)) {
         ngx_log_error(alcf->log_level, r->connection->log, 0,
                       "g2o signature incorrect, expected \"%s\", got \"%V\"",
                       signature, &header_sign);
-        return 0;
+        return NGX_ERROR;
     }
 
     /* request past all checks, content is good to go! */
-    return 1;
+    return NGX_OK;
 }
 
 
-static ngx_int_t 
+static ngx_int_t
 ngx_http_auth_akamai_g2o_base64_signature_of_data(ngx_http_request_t *r,
     ngx_str_t data, ngx_str_t key, u_char *signature)
 {
@@ -369,70 +369,70 @@ ngx_http_auth_akamai_g2o_base64_signature_of_data(ngx_http_request_t *r,
 }
 
 
-static u_char * 
+static u_char *
 ngx_http_auth_akamai_g2o_get_next_auth_data_token(u_char *start,
     u_char *end, ngx_str_t *output)
 {
-	output->data = start;
-	for (; start + 1 < end; start++) {
-		if (start[0] == ',' && start[1] == ' ')
-		{
-			output->len = start - output->data;
-			return start + 2;
-		}
-	}
-	output->len = end - output->data;
-	return end;
+    output->data = start;
+    for (; start + 1 < end; start++) {
+        if (start[0] == ',' && start[1] == ' ')
+        {
+            output->len = start - output->data;
+            return start + 2;
+        }
+    }
+    output->len = end - output->data;
+    return end;
 }
 
 
-static int 
+static ngx_int_t
 ngx_http_auth_akamai_g2o_get_auth_data_fields(ngx_str_t data, u_int *version,
     u_int *time, ngx_str_t *nonce)
 {
-	u_char *p = data.data;
-	u_char *end = data.data + data.len;
-	ngx_str_t cur_token;
+    u_char *p = data.data;
+    u_char *end = data.data + data.len;
+    ngx_str_t cur_token;
 
-	/* version */
-	p = ngx_http_auth_akamai_g2o_get_next_auth_data_token(p, end, &cur_token);
-	if (cur_token.len == 0) {
-		return 0;
+    /* version */
+    p = ngx_http_auth_akamai_g2o_get_next_auth_data_token(p, end, &cur_token);
+    if (cur_token.len == 0) {
+        return NGX_ERROR;
     }
-	*version = ngx_atoi(cur_token.data, cur_token.len);
+    *version = ngx_atoi(cur_token.data, cur_token.len);
 
-	/* ghost ip */
-	p = ngx_http_auth_akamai_g2o_get_next_auth_data_token(p, end, &cur_token);
-	if (cur_token.len == 0) {
-		return 0;
-    }
-
-	/* client ip */
-	p = ngx_http_auth_akamai_g2o_get_next_auth_data_token(p, end, &cur_token);
-	if (cur_token.len == 0) {
-		return 0;
+    /* ghost ip */
+    p = ngx_http_auth_akamai_g2o_get_next_auth_data_token(p, end, &cur_token);
+    if (cur_token.len == 0) {
+        return NGX_ERROR;
     }
 
-	/* time */
-	p = ngx_http_auth_akamai_g2o_get_next_auth_data_token(p, end, &cur_token);
-	if (cur_token.len == 0) {
-		return 0;
-    }
-	*time = ngx_atoi(cur_token.data, cur_token.len);
-
-	/* unique id */
-	p = ngx_http_auth_akamai_g2o_get_next_auth_data_token(p, end, &cur_token);
-	if (cur_token.len == 0) {
-		return 0;
+    /* client ip */
+    p = ngx_http_auth_akamai_g2o_get_next_auth_data_token(p, end, &cur_token);
+    if (cur_token.len == 0) {
+        return NGX_ERROR;
     }
 
-	/* nonce */
-	p = ngx_http_auth_akamai_g2o_get_next_auth_data_token(p, end, nonce);
-	if (nonce->len == 0) {
-		return 0;
+    /* time */
+    p = ngx_http_auth_akamai_g2o_get_next_auth_data_token(p, end, &cur_token);
+    if (cur_token.len == 0) {
+        return NGX_ERROR;
+    }
+    *time = ngx_atoi(cur_token.data, cur_token.len);
+
+    /* unique id */
+    p = ngx_http_auth_akamai_g2o_get_next_auth_data_token(p, end, &cur_token);
+    if (cur_token.len == 0) {
+        return NGX_ERROR;
     }
 
-    return 1;
+    /* nonce */
+    p = ngx_http_auth_akamai_g2o_get_next_auth_data_token(p, end, nonce);
+    if (nonce->len == 0) {
+        return NGX_ERROR;
+    }
+
+    return NGX_OK;
 }
 
 
@@ -444,21 +444,26 @@ ngx_http_auth_akamai_g2o_handler(ngx_http_request_t *r)
     alcf = ngx_http_get_module_loc_conf(r, ngx_http_auth_akamai_g2o_module);
 
     switch (alcf->mode) {
-	case NGX_HTTP_AUTH_AKAMAI_GEO_MODE_OFF:
-		break;
+    case NGX_HTTP_AUTH_AKAMAI_GEO_MODE_OFF:
+        break;
 
-	case NGX_HTTP_AUTH_AKAMAI_GEO_MODE_ON:
-		if (!ngx_http_auth_akamai_g2o_check_headers(r, alcf)) {
-			return NGX_HTTP_FORBIDDEN;
-		}
-		break;
+    case NGX_HTTP_AUTH_AKAMAI_GEO_MODE_ON:
+        if (ngx_http_auth_akamai_g2o_check_headers(r, alcf) != NGX_OK) {
+            ngx_log_error(alcf->log_level, r->connection->log, 0,
+                          "g2o auth failed, mode: on");
+            return NGX_HTTP_FORBIDDEN;
+        }
+        break;
 
-	case NGX_HTTP_AUTH_AKAMAI_GEO_MODE_DRY_RUN:
-		ngx_http_auth_akamai_g2o_check_headers(r, alcf);
-		break;
-	}
+    case NGX_HTTP_AUTH_AKAMAI_GEO_MODE_DRY_RUN:
+        if (ngx_http_auth_akamai_g2o_check_headers(r, alcf) != NGX_OK) {
+            ngx_log_error(alcf->log_level, r->connection->log, 0,
+                          "g2o auth failed, mode: dry_run");
+        }
+        break;
+    }
 
-	return NGX_OK;
+    return NGX_OK;
 }
 
 
@@ -506,7 +511,7 @@ ngx_http_auth_akamai_g2o_create_loc_conf(ngx_conf_t *cf)
     conf->hash_function = NGX_CONF_UNSET_PTR;
     conf->version = NGX_CONF_UNSET_UINT;
     conf->time_window = NGX_CONF_UNSET;
-	conf->log_level = NGX_CONF_UNSET_UINT;
+    conf->log_level = NGX_CONF_UNSET_UINT;
     return conf;
 }
 
@@ -518,7 +523,7 @@ ngx_http_auth_akamai_g2o_merge_loc_conf(ngx_conf_t *cf, void *parent,
     ngx_http_auth_akamai_g2o_loc_conf_t  *prev = parent;
     ngx_http_auth_akamai_g2o_loc_conf_t  *conf = child;
 
-	ngx_conf_merge_uint_value(conf->mode, prev->mode,
+    ngx_conf_merge_uint_value(conf->mode, prev->mode,
         NGX_HTTP_AUTH_AKAMAI_GEO_MODE_OFF);
 
     if (conf->key == NULL) {
@@ -537,22 +542,22 @@ ngx_http_auth_akamai_g2o_merge_loc_conf(ngx_conf_t *cf, void *parent,
         EVP_md5);
     ngx_conf_merge_uint_value(conf->version, prev->version, 3);
     ngx_conf_merge_value(conf->time_window, prev->time_window, 30);
-	ngx_conf_merge_uint_value(conf->log_level, prev->log_level, NGX_LOG_ERR);
+    ngx_conf_merge_uint_value(conf->log_level, prev->log_level, NGX_LOG_ERR);
 
-	if (conf->mode != NGX_HTTP_AUTH_AKAMAI_GEO_MODE_OFF) {
+    if (conf->mode != NGX_HTTP_AUTH_AKAMAI_GEO_MODE_OFF) {
 
-		if (!conf->key) {
-			ngx_conf_log_error(NGX_LOG_ERR, cf, 0,
-				"auth_akamai_g2o_key not configured");
-			return NGX_CONF_ERROR;
-		}
+        if (!conf->key) {
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0,
+                "auth_akamai_g2o_key not configured");
+            return NGX_CONF_ERROR;
+        }
 
-		if (!conf->nonce) {
-			ngx_conf_log_error(NGX_LOG_ERR, cf, 0,
-				"auth_akamai_g2o_nonce not configured");
-			return NGX_CONF_ERROR;
-		}
-	}
+        if (!conf->nonce) {
+            ngx_conf_log_error(NGX_LOG_ERR, cf, 0,
+                "auth_akamai_g2o_nonce not configured");
+            return NGX_CONF_ERROR;
+        }
+    }
 
     return NGX_CONF_OK;
 }
