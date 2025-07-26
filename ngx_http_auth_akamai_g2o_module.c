@@ -15,8 +15,8 @@
 
 
 #define NGX_HTTP_AUTH_AKAMAI_GEO_MODE_OFF            0  /* no G2O validation */
-#define NGX_HTTP_AUTH_AKAMAI_GEO_MODE_DRY_RUN,       1  /* validate G2O but don't fail any requests */
-#define NGX_HTTP_AUTH_AKAMAI_GEO_MODE_ON,            2  /* validate G2O and fail the request if invalid */
+#define NGX_HTTP_AUTH_AKAMAI_GEO_MODE_DRY_RUN        1  /* validate G2O but don't fail any requests */
+#define NGX_HTTP_AUTH_AKAMAI_GEO_MODE_ON             2  /* validate G2O and fail the request if invalid */
 
 
 typedef struct {
