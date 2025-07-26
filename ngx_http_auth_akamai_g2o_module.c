@@ -71,7 +71,7 @@ static ngx_conf_num_bounds_t  ngx_http_auth_akamai_g2o_version_bounds = {
 static ngx_command_t  ngx_http_auth_akamai_g2o_commands[] = {
 
     { ngx_string("auth_akamai_g2o"),
-      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
       ngx_conf_set_enum_slot,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(ngx_http_auth_akamai_g2o_loc_conf_t, mode),
